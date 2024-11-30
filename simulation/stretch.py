@@ -29,8 +29,8 @@ def init_scene(p, mug_random=False):
 
     ################ Robot
     mobot_urdf_file = os.path.join(root_dir,"resource/urdf/stretch/stretch.urdf")
-    # mobot = Robot(pybullet_api=p, start_pos=[-0.8,0.0,0.03], urdf_file=mobot_urdf_file)
-    mobot = Robot(pybullet_api=p, start_pos=[-0.36,-0.5,0.08], urdf_file=mobot_urdf_file)
+    mobot = Robot(pybullet_api=p, start_pos=[-0.8,0.0,0.03], urdf_file=mobot_urdf_file) #original
+    # mobot = Robot(pybullet_api=p, start_pos=[-0.36,-0.5,0.08], urdf_file=mobot_urdf_file) #wamika
 
     for _ in range(30):
         p.stepSimulation()
@@ -131,7 +131,7 @@ def init_scene(p, mug_random=False):
                                     basePosition=cabinet2_position,\
                                     baseOrientation=cabinet2_orientation,\
                                     globalScaling=cabinet2_scaling)
-    # object_ids.append(cabinet2_id) # The one on the wall
+    object_ids.append(cabinet2_id) # The one on the wall
     cabinet_id = cabinet2_id
     p.changeVisualShape(cabinet2_id,2,rgbaColor=[0.5,0.5,0.5,1])
     p.changeVisualShape(cabinet2_id,1,rgbaColor=[1,1,1,1])

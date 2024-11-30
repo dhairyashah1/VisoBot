@@ -13,7 +13,7 @@ class EndEffectorController:
         self.joint_indices = joint_indices
         self.joint_limits = joint_limits
 
-    def move_to_position(self, target_position, max_steps=500, max_velocity=0.1):
+    def move_to_position(self, target_position, max_steps=5000, max_velocity=0.1):
         """
         Moves the end effector to the specified target position using prismatic joints.
         
@@ -31,7 +31,11 @@ class EndEffectorController:
             direction = target_position - current_position
             distance = np.linalg.norm(direction)
             if distance < 0.005:
-                print("Target reached.")
+                print("====================================================")
+                print("End-effector target reached ===>")
+                print("----------------------------------------------------")
+                print(f"Current end-effector position: {current_position}")
+                print("====================================================")
                 arm_control(self.robot, p, up=0, stretch=0, roll=0, yaw=0)
                 base_control(self.robot, p, forward=0, turn=0)
                 break
@@ -223,7 +227,7 @@ def main():
         # Print the joint information
         print(f"Joint Index: {joint_index}, Joint Name: {joint_name}, Joint Type: {joint_type}, "
             f"Lower Limit: {joint_lower_limit}, Upper Limit: {joint_upper_limit}")
-        
+
         joint_limits[joint_index] = (joint_lower_limit, joint_upper_limit)
 
 
@@ -236,7 +240,8 @@ def main():
     target_position = [0.27, -0.89, 0.91] # cup location measured
 
     # target_position = [-1, -3.8, 0.92]
-    time.sleep(10)
+    # time.sleep(10)
+    time.sleep(5)
     # controller.orient_base_to_match_arm_orientation(target_position)
     controller.move_to_position(target_position, max_velocity=0.05)
     arm_control(mobot, p, up=0, stretch=0, roll=0, yaw=0)

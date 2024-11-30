@@ -5,7 +5,7 @@ import random
 directions = [(0, 1), (1, 0), (0, -1), (-1, 0), 
               (1, 1), (-1, 1), (1, -1), (-1, -1)]
 
-def astar(grid, start, end, path_type="random"):
+def astar(grid, start, end, path_type="shortest"):
     """
     A* pathfinding algorithm to find the shortest path on a grid.
 
