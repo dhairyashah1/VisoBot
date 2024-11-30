@@ -115,9 +115,9 @@ while (1):
     elif gripper_open == -1:
         detach(constraint)
         constraint = None
-    
+
     mobot.get_observation()
-    
+
     current_position, _, _ = get_robot_base_pose(p, mobot.robotId)
     total_driving_distance += np.linalg.norm(np.array(current_position) - np.array(previous_position))
     previous_position = current_position

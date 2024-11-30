@@ -30,7 +30,7 @@ class EndEffectorController:
             print(f"Step {step + 1}/{max_steps}: Moving to target position {target_position}, given current position {current_position}")
             direction = target_position - current_position
             distance = np.linalg.norm(direction)
-            if distance < 0.01:
+            if distance < 0.005:
                 print("Target reached.")
                 arm_control(self.robot, p, up=0, stretch=0, roll=0, yaw=0)
                 base_control(self.robot, p, forward=0, turn=0)
@@ -204,8 +204,9 @@ def main():
     p.setGravity(0, 0, -9.81)
     p.setRealTimeSimulation(0)
 
-    mobot, table_id = init_scene(p, mug_random=False)
-    
+    mobot = init_scene(p, mug_random=False)
+    # mobot, table_id = init_scene(p, mug_random=False)
+
     # Define the joint indices and limits
     joint_indices = [3, 8, 10, 11, 12, 13, 14, 16]
     joint_limits = {}
@@ -231,7 +232,9 @@ def main():
     controller = EndEffectorController(mobot, mobot.robotId, end_effector_index, joint_indices, joint_limits)
 
     # Move the end effector to the target position
-    target_position = [0.27, -0.71, 0.92]
+    # target_position = [0.27, -0.71, 0.92] # cup location
+    target_position = [0.27, -0.89, 0.91] # cup location measured
+
     # target_position = [-1, -3.8, 0.92]
     time.sleep(10)
     # controller.orient_base_to_match_arm_orientation(target_position)
