@@ -12,12 +12,16 @@ sys.path.append('./')
 
 object_ids = []
 cabinet_id = 1
+mug1_id = 0
 
 def get_object_ids():
     return object_ids
 
 def get_cabinet_id():
     return cabinet_id
+
+def get_mug1_id():
+    return mug1_id
 
 def init_scene(p, mug_random=False):
     root_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../")
@@ -132,6 +136,7 @@ def init_scene(p, mug_random=False):
                                     baseOrientation=cabinet2_orientation,\
                                     globalScaling=cabinet2_scaling)
     object_ids.append(cabinet2_id) # The one on the wall
+    global cabinet_id
     cabinet_id = cabinet2_id
     p.changeVisualShape(cabinet2_id,2,rgbaColor=[0.5,0.5,0.5,1])
     p.changeVisualShape(cabinet2_id,1,rgbaColor=[1,1,1,1])
@@ -278,7 +283,11 @@ def init_scene(p, mug_random=False):
                                  globalScaling=mug_scaling,
                                  basePosition=mug_position,
                                  baseOrientation=mug_orientation)
+    global mug1_id
+    mug1_id = mug_id
     # self.p.changeVisualShape(self.mug_id, -1, rgbaColor=[1.,1.,1.0,1])
+
+
     obj_friction_ceof = 4000.0
     p.changeDynamics(mug_id, -1, lateralFriction=obj_friction_ceof)
     p.changeDynamics(mug_id, -1, rollingFriction=obj_friction_ceof)

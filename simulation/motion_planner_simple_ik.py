@@ -13,7 +13,7 @@ class EndEffectorController:
         self.joint_indices = joint_indices
         self.joint_limits = joint_limits
 
-    def move_to_position(self, target_position, max_steps=5000, max_velocity=0.005):
+    def move_to_position(self, target_position, max_steps=800, max_velocity=0.05): #0.01
         """
         Moves the end effector to the specified target position using prismatic joints.
         
@@ -24,7 +24,7 @@ class EndEffectorController:
         current_position = np.array(p.getLinkState(self.robot_id, self.end_effector_index)[0])
         target_position = np.array(target_position)
 
-        # self.orient_base_to_match_arm_orientation(target_position) #originalk
+        self.orient_base_to_match_arm_orientation(target_position) #originalk
         # self.orient_base_to_target(target_position)
 
         for step in range(max_steps):
@@ -59,7 +59,8 @@ class EndEffectorController:
                 next_position
             )
 
-            joint_angle_indices = [2, 5, 6, 7, 8, 9, 10, 11]
+            # joint_angle_indices = [0, 1, 2, 5, 6, 7, 8, 9, 10, 11] # adding more joints - 0 and 1
+            joint_angle_indices = [2, 5, 6, 7, 8, 9, 10, 11] # adding more joints - 0 and 1
 
             # Move each joint to the calculated angle
             for i in range(len(self.joint_indices)):
@@ -88,6 +89,8 @@ class EndEffectorController:
                     maxVelocity=max_velocity
                 )
 
+            # self.orient_base_to_match_arm_orientation(target_position) #originalk
+
             # Step the simulation to move the joints
             p.stepSimulation()
 
@@ -103,7 +106,8 @@ class EndEffectorController:
         """
         # Temporarily move the end effector to the position to check for collisions
         temp_joint_angles = p.calculateInverseKinematics(self.robot_id, self.end_effector_index, position)
-        joint_angle_indices = [2, 5, 6, 7, 8, 9, 10, 11]
+        # joint_angle_indices = [0, 1, 2, 5, 6, 7, 8, 9, 10, 11] # added 0 and 1
+        joint_angle_indices = [2, 5, 6, 7, 8, 9, 10, 11] # added 0 and 1
         for i in range(len(self.joint_indices)):
             p.resetJointState(self.robot_id, self.joint_indices[i], temp_joint_angles[joint_angle_indices[i]])
         p.stepSimulation()
@@ -248,7 +252,7 @@ class EndEffectorController:
             
             p.stepSimulation()
             time.sleep(0.01)
-            
+
             # Update current yaw and angle difference
             current_yaw = self.get_current_base_orientation()
             angle_diff = np.arctan2(np.sin(desired_yaw - current_yaw), 

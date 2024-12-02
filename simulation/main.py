@@ -26,6 +26,12 @@ MANIP = 1
 MANIP_COMPLETE = 0
 GRASP = 1
 GRASP_COMPLETE = 0
+END = 0
+
+NAV2 = 1
+NAV2_COMPLETE = 0
+MANIP2 = 1
+MANIP2_COMPLETE = 0
 
 # Init static grid
 grid_size = (201, 201)   # (51, 51)
@@ -38,7 +44,9 @@ inflation_radius = 0.2 #0.2
 spawn_pos = [-0.8, 0]
 # end_room_pos = [3.6, 0.9] # [2.54, 0.05] #old right of box
 # end_room_pos = [3.6, 0.9] # [2.54, 0.05] #old right of box
-end_room_pos = [3.3, 0.25] # 3.3, 0.25[2.54, 0.05] #old right of box
+# end_room_pos = [3.36, 0.27] # 3.3, 0.25[2.54, 0.05] #old right of box
+# end_room_pos = [3.25, 0.3]
+end_room_pos = [3.55, 0.31]
 
 # manipulation coordinates
 mani_pos_1 =  [0.27, -0.71, 0.92]
@@ -49,26 +57,37 @@ nav_mani_pos_1 = [-0.26,-0.5, 0.08]
 nav_mani_pos_2 = [-1.185, -3.195, 0.08] # tricky - reduce speed
 nav_mani_pos_3 = [1.95, -2.0, 0.08 ]
 
-mug1_pos = [0.25, -0.93, 1.53]
+nav_overall_pos_1 = [-0.5, -0.9, 0.92]
+
+mug1_pos = [0.27, -0.94, 0.898] #1.53]
 trashbin_pos = [-1.1, -4.01, 0.48]
 
 drawer_pos = [3.84, 0.05,  0.42]
+open_drawer_pos = [3.60, 0.05, 0.42]
 # mug2_pos = [drawer_pos[0]-0.15, drawer_pos[1], 0.75] # 1.5]
-mug2_pos = [3.689974353354115, 0.050003517533320364, 0.9] #0.8347266461268507]
+mug2_pos = [3.689974353354115, 0.050003517533320364, 0.95] #0.8347266461268507]
 
 cup_pos = [-0.26,-0.5, 0.08]
 
+bed_side_pos = [3.05, -2.71, 0.085]
+
+mug1_id = get_mug1_id()
 # FINAL VIDEO
 # 1)
 # NAV - navi_mani_pos_1
 # MANI - mug1_pos
-# GRASP
-#
+# GRASP PICKUP
+# MANI - current base position
+# GRASP PLACE
+# MANI - (3.0560903754156827, -2.6100665989264673, 0.08579989843587887)
+
 
 # 2)
-# NAV - end_room_pos
-# MANI - mug2_pos
-# GRASP
+# NAV - end_room_pos = [3.55, 0.31]
+# MANI - mug2_pos = [3.689974353354115, 0.050003517533320364, 0.95]
+# GRASP PICKUP -
+# MANI - [(current_pos[0]-0.23, current_pos[1])]
+# GRASP PLACE (release)
 ########################################################################################################
 
 mobot.get_observation()
@@ -89,7 +108,8 @@ def manipulate_simple_ik(p, mobot, target_position = [0.27, -0.89, 0.91]):
 
     global MANIP_COMPLETE
     # Define the joint indices and limits
-    joint_indices = [3, 8, 10, 11, 12, 13, 14, 16]
+    # joint_indices = [1, 2, 3, 8, 10, 11, 12, 13, 14, 16] # added 1, 2
+    joint_indices = [3, 8, 10, 11, 12, 13, 14, 16] # added 1, 2
     joint_limits = {}
 
     # Print joint information
@@ -111,9 +131,9 @@ def manipulate_simple_ik(p, mobot, target_position = [0.27, -0.89, 0.91]):
     end_effector_index = 18  # Replace with the actual end effector index
     controller = EndEffectorController(mobot, mobot.robotId, end_effector_index, joint_indices, joint_limits)
 
-    time.sleep(10)
+    time.sleep(5)
     # controller.orient_base_to_match_arm_orientation(target_position)
-    controller.move_to_position(target_position, max_velocity=0.01) #ORIGINAL 0.05
+    controller.move_to_position(target_position, max_velocity=0.05) #ORIGINAL 0.05
     arm_control(mobot, p, up=0, stretch=0, roll=0, yaw=0)
     base_control(mobot, p, forward=0, turn=0)
     motion_planning_test(p, mobot.robotId, target_position)
@@ -142,11 +162,11 @@ def generate_waypoints(p, mobot, start_pos = spawn_pos, target_pos = end_room_po
     print(path)
 
     # Note: Always mark custom cells AFTER running astar...
-    grid.mark_custom_cell(start_idx, 3)
-    grid.mark_custom_cell(end_idx, 3)
-    grid.mark_custom_cells(path, 2)
-    grid.mark_custom_cell(start_idx, 3)
-    grid.mark_custom_cell(end_idx, 3)
+    # grid.mark_custom_cell(start_idx, 3)
+    # grid.mark_custom_cell(end_idx, 3)
+    # grid.mark_custom_cells(path, 2)
+    # grid.mark_custom_cell(start_idx, 3)
+    # grid.mark_custom_cell(end_idx, 3)
     grid.print_grid()
 
     # get path in real-world coordinates
@@ -191,7 +211,7 @@ def follow_waypoints(p, mobot, smoothed_waypoints):
                 motorId,
                 controlMode=p.POSITION_CONTROL,
                 targetPosition=joint_positions[motorId - 1],
-                targetVelocity=0.001, # 0.001
+                targetVelocity=0.001*2, # 0.001
                 force=5
             )
 
@@ -204,7 +224,7 @@ def follow_waypoints(p, mobot, smoothed_waypoints):
 
             # Check if the robot is close enough to the target waypoint
             distance_to_target = np.linalg.norm(np.array(current_pos[:2]) - np.array(waypoint))
-            if distance_to_target <= 0.13:
+            if distance_to_target <= 0.15:
                 print(f"Reached waypoint: {waypoint}")
                 break  # Move to the next waypoint
 
@@ -233,10 +253,10 @@ def follow_waypoints(p, mobot, smoothed_waypoints):
     #         force=80
     # )
 
-def grasp_attach(p, mobot):
+def grasp_attach(p, mobot, obj_id=21):
     # gripper open
     global constraint
-    constraint = attach(21, mobot.robotId, 18)
+    constraint = attach(obj_id, mobot.robotId, 18)
 
 def grasp_detach(p, mobot):
     # gripper close
@@ -246,16 +266,18 @@ def grasp_detach(p, mobot):
 
 # driver code
 # total_driving_distance = 0
-smoothed_waypoints = generate_waypoints(p, mobot, target_pos=end_room_pos)
+
+smoothed_waypoints = generate_waypoints(p, mobot, target_pos=nav_overall_pos_1)      ### 1
+# smoothed_waypoints = generate_waypoints(p, mobot, target_pos=end_room_pos)       ### 2
 while (1):
     time.sleep(1./240.)
 
-    mug_position = get_mug_pose(p)
-    print(f"Mug position: {mug_position}")
+    # mug_position = get_mug_pose(p)
+    # print(f"Mug position: {mug_position}")
 
     if NAV and not(NAV_COMPLETE):
         follow_waypoints(p, mobot, smoothed_waypoints)
-
+        print("==== Navigation complete =================")
         # if navi_flag == False:
         #     if current_pos[0] > 1.6 and current_pos[1] > -0.35:
         #         print("Reached the goal region!")
@@ -278,14 +300,66 @@ while (1):
 
     elif MANIP and NAV_COMPLETE and not(MANIP_COMPLETE):
         mug_position = get_mug_pose(p)
-        print(f"Mug position: {mug_position}")
-        manipulate_simple_ik(p, mobot, mug2_pos)
+        # print(f"Mug position: {mug_position}")
+        manipulate_simple_ik(p, mobot, mug1_pos)        ## 1
+        # manipulate_simple_ik(p, mobot, mug2_pos)       ## 2
         MANIP_COMPLETE = 1
+        print("==== Manipulation complete =================")
+
         # ee_position, _, _ = get_robot_ee_pose(p, mobot.robotId)
         # print(f"End-Effector Position: {ee_position}")
-    elif GRASP and NAV_COMPLETE and MANIP_COMPLETE:
-        grasp_attach(p, mobot)
-        print("Grasp Done")
+    elif GRASP and NAV_COMPLETE and MANIP_COMPLETE and not(GRASP_COMPLETE):
+        grasp_attach(p, mobot, mug1_id) # 1
+        # grasp_attach(p, mobot) # 2
+        print("==== Grasp Attach complete =================")
+        GRASP_COMPLETE = 1
+    elif GRASP_COMPLETE and not(END):
+
+        arm_control(mobot, p , stretch=-1)
+        time.sleep(2.7)
+        arm_control(mobot, p, stretch=0, up=-1)
+        time.sleep(1.2)
+        arm_control(mobot, p, up=0)
+        # manipulate_simple_ik(p, mobot, [current_pos[0]-0.05, current_pos[1], 0.85]) # current_pos[2] + 0.2])                                    ## 1
+        # follow_waypoints(p, mobot, [(current_pos[0]-0.23, current_pos[1])])            ## 2
+
+        gripper_control(mobot, p, cmd=0)
+        grasp_detach(p, mobot)
+
+        current_pos, _, _ = get_robot_base_pose(p, mobot.robotId)
+        ## 1
+        smoothed_waypoints2 = generate_waypoints(p, mobot, start_pos=current_pos, target_pos=bed_side_pos)      ### 1
+        follow_waypoints(p, mobot, smoothed_waypoints2)
+
+        # current_pos, _, _ = get_robot_base_pose(p, mobot.robotId)
+        mug_position = get_mug_pose(p, mug_id=mug1_id)
+
+        arm_control(mobot, p, up=-1)
+        time.sleep(2)
+        arm_control(mobot, p, up=0)
+        # manipulate_simple_ik(p, mobot, [mug_position[0], mug_position[1], mug_position[2] + 0.1])
+        grasp_attach(p, mobot, mug1_id)
+
+        time.sleep(1)
+        # manipulate_simple_ik(p, mobot, [bed_side_pos[0], bed_side_pos[1] + 0.8, bed_side_pos[2] + 0.5])
+
+
+        arm_control(mobot, p , up=1)
+        time.sleep(2.5)
+        arm_control(mobot, p, stretch=1, up=0)
+        time.sleep(4)
+        arm_control(mobot, p, stretch=0)
+        time.sleep(1)
+        gripper_control(mobot, p, cmd=0)
+        grasp_detach(p, mobot)
+
+        print("==== Navigation to GOAL complete =================")
+        base_control(mobot, p, forward=0, turn=0)
+        END = 1
+    else:
+        print("=== TASK DONE =================")
+        break
+
 
 
 while True:
