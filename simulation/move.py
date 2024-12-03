@@ -2,6 +2,7 @@ import pybullet as p
 import numpy as np
 import time
 from utils.tools import *
+from stretch import base_control
 
 def follow_waypoints(p, mobot, waypoints):
     """
@@ -46,22 +47,4 @@ def stop_robot(p, mobot):
     """
     Stops the robot
     """
-
-    # control robot's base joints
-    # p.resetBaseVelocity(
-    #     mobot.robotId,
-    #     [0, 0, 0],
-    #     [0, 0, 0]
-    # )
-
-    # p.setJointMotorControlArray(
-    #     mobot.robotId,
-    #     [1, 2, 3],
-    #     controlMode=p.VELOCITY_CONTROL,
-    #     # targetPositions=joint_positions[:3],
-    #     forces=[0, 0, 0]
-    # )
-
-    while True:
-        p.stepSimulation()
-        time.sleep(1 / 240.0)
+    base_control(mobot, p, forward=0, turn=0)

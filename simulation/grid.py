@@ -83,3 +83,33 @@ class StaticGrid:
     def print_grid(self):
         for row in self.grid:
             print(' '.join(map(str, row)))
+
+    def get_random_points(self, num_points = 10):
+
+        # Detect the env bounding box (walls)
+        rows, cols = np.where(self.grid == 1)
+        top, bottom = rows.min(), rows.max()
+        left, right = cols.min(), cols.max()
+
+        print(f"Top:{top}, Bottom:{bottom}, Left:{left}, Right:{right}")
+
+        # Get all coordinates of the array
+        coords_inside_box = [
+            (i, j)
+            for i in range(top + 1, bottom)
+            for j in range(left + 1, right)
+            if self.grid[i, j] == 0  # Only include coordinates with 0
+        ]
+
+        # Ensure coords_inside_box contains at least num_points number of points
+        if len(coords_inside_box) >= num_points:
+            random_points_idx = random.sample(coords_inside_box, 10)
+        else:
+            random_points_idx = random.sample(coords_inside_box, len(coords_inside_box))
+
+        random_world_coordinates = [self.grid_to_world(grid_x, grid_y) for grid_x, grid_y in random_points_idx]
+
+        print(f"Randomly picked {num_points} points inside the box: {random_points_idx}")
+        print(f"Randomly Selected Points (World Cooordinates): {random_world_coordinates}")
+
+        return random_world_coordinates

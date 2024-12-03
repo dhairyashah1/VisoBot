@@ -89,7 +89,7 @@ def run_astar(grid, start, end):
     while open_set:
         current_f_score, current = heapq.heappop(open_set)
 
-        print(f"Processing {current} with f_score: {current_f_score}")  # Debugging line
+        # print(f"Processing {current} with f_score: {current_f_score}")  # Debugging line
 
         if current == end:
             return reconstruct_path(came_from, current)
@@ -111,7 +111,7 @@ def run_astar(grid, start, end):
 
                 if neighbour not in closed_set:
                     heapq.heappush(open_set, (f_score[neighbour], neighbour))
-                    print(f"Adding to open_set: {neighbour} with f_score: {f_score[neighbour]}")  # Debugging line
+                    # print(f"Adding to open_set: {neighbour} with f_score: {f_score[neighbour]}")  # Debugging line
     return None  # no path found
 
 def manhattan_distance(p1, p2):
