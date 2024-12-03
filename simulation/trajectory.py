@@ -1,7 +1,12 @@
 # takes in a list of waypoints and smoothens the trajectory
 import numpy as np
 from scipy.interpolate import CubicSpline
+
 def smooth_trajectory_cubic(waypoints, num_points=100):
+    """
+    This function smoothens the trajectory of the generated waypoints for the robot to ensure a smoothen path by cubic interpolation.
+    num_points: Increases the resolution and number of generated way-points
+    """
     waypoints = np.array(waypoints)
     t = np.linspace(0, 1, len(waypoints))
 

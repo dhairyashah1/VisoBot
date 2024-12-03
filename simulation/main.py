@@ -1,3 +1,7 @@
+"""
+This is the main driver code for navigation, manipulation and grasping to control the robot and execute end-to-end tasks.
+"""
+
 import time
 import numpy as np
 import pickle
@@ -22,7 +26,9 @@ mobot = init_scene(p, mug_random=False)
 object_ids = get_object_ids()
 mug1_id = get_mug1_id()
 
-TASK_NUM = 3  # EITHER 1 or 2
+##########################################################################################################
+TASK_NUM = 2  # EITHER 1 (mug1 pickup and place on bed) or 2 (mug2 pickup and place in drawer) or 3 (random navigation and manipulation)
+##########################################################################################################
 
 # State Machine Flags - Enable
 NAV = 1                           # Navigation
@@ -33,7 +39,7 @@ GRASP = 0                         # Grasp
 GRASP_COMPLETE = 0
 END = 0
 
-# Init static grid
+# Init static grid for mapping
 grid_size = (201, 201)             # (51, 51)
 cell_size = 0.05                   # 0.2 #= 20 cm
 inflation_radius = 0.2 #0.2
@@ -43,6 +49,7 @@ inflation_radius = 0.2 #0.2
 #navigation endpoints
 spawn_pos = [-0.8, 0]
 
+##########################################################################################################
 # manipulation coordinates
 mani_pos_1 =  [0.27, -0.71, 0.92]
 mani_pos_2 = [-1.70, -3.70, 0.46]
@@ -52,8 +59,9 @@ mani_pos_3 = [1.45, -1.68, 0.59]
 nav_mani_pos_1 = [-0.26,-0.5, 0.08]
 nav_mani_pos_2 = [-1.185, -3.195, 0.08] # tricky - reduce speed
 nav_mani_pos_3 = [1.95, -2.0, 0.08 ]
+##########################################################################################################
 
-# TASK 1 - Pickup mug_1 and take it to the bed
+# TASK 1 - Pickup mug_1 and take it to the bed #########################################################
 # NAV - nav_overall_pos_1 = [-0.5, -0.9, 0.92]
 # MANI - mug1_pos
 # GRASP PICKUP
@@ -63,8 +71,9 @@ nav_mani_pos_3 = [1.95, -2.0, 0.08 ]
 nav_overall_pos_1 = [-0.5, -0.9, 0.92]
 mug1_pos = [0.27, -0.94, 0.898] #1.53]
 bed_side_pos = [3.05, -2.71, 0.085]
+##########################################################################################################
 
-# TASK 2 - Pickup mug_2 on top of the drawer in the end_room and place it in the open drawer
+# TASK 2 - Pickup mug_2 on top of the drawer in the end_room and place it in the open drawer #############
 # NAV - end_room_pos = [3.55, 0.31]
 # MANI - mug2_pos = [3.689974353354115, 0.050003517533320364, 0.95]
 # GRASP PICKUP -
@@ -74,6 +83,7 @@ end_room_pos = [3.55, 0.31]
 drawer_pos = [3.84, 0.05,  0.42]
 open_drawer_pos = [3.60, 0.05, 0.42]
 mug2_pos = [3.689974353354115, 0.050003517533320364, 0.95] #0.8347266461268507]
+##########################################################################################################
 
 # Grid setup
 grid = StaticGrid(grid_size=grid_size, cell_size=cell_size, inflation_radius=inflation_radius)
@@ -97,6 +107,9 @@ grasp_flag = False
 
 ##########################################################################################################
 def nearest_random_manipulation_coordinate(coordinate, radius=0.4):
+    """
+    Generates a random eligible co-ordinate of the world near the given coordinate in extent of given radius / distance
+    """
     x, y = coordinate
     z = random.uniform(0.46, 1)
 
@@ -114,6 +127,7 @@ def nearest_random_manipulation_coordinate(coordinate, radius=0.4):
     new_y = y + distance * math.sin(angle)
     return [new_x, new_y, z]
 
+##########################################################################################################
 if TASK_NUM == 3:
     random_coordinates = grid.get_random_points(num_points=1)
 
@@ -123,14 +137,18 @@ if TASK_NUM == 3:
     print(f"Generated Random Navigation Location = {navi_location}")
     mani_location = nearest_random_manipulation_coordinate(navi_location)
     print(f"Generated Random Manipulation Location = {mani_location}")
+##########################################################################################################
 
-# Miscellaneous
+# Miscellaneous points
 cup_pos = [-0.26,-0.5, 0.08]
 trashbin_pos = [-1.1, -4.01, 0.48]
 
 ########################################################################################################
-def manipulate_simple_ik(p, mobot, target_position = [0.27, -0.89, 0.91]):
 
+def manipulate_simple_ik(p, mobot, target_position = [0.27, -0.89, 0.91]):
+    """
+    This function uses Inverse kinematics to generate waypoints and control the arm for manipulation operation
+    """
     global MANIP_COMPLETE
     # Define the joint indices and limits
     # joint_indices = [1, 2, 3, 8, 10, 11, 12, 13, 14, 16] # added 1, 2
@@ -167,6 +185,9 @@ def manipulate_simple_ik(p, mobot, target_position = [0.27, -0.89, 0.91]):
 
 
 def generate_waypoints(p, mobot, start_pos = spawn_pos, target_pos = end_room_pos):
+    """
+    This function generates waypoints for robot navigation as per the target position and start position
+    """
     global grid
 
     start_idx = grid.world_to_grid(start_pos[0], start_pos[1]) # spawn position
@@ -176,7 +197,7 @@ def generate_waypoints(p, mobot, start_pos = spawn_pos, target_pos = end_room_po
     print("End grid index = ", end_idx)
 
     path = astar(grid=grid, start=start_idx, end=end_idx)
-    # print(path)
+    print(path)
 
     # Note: Always mark custom cells AFTER running astar - for debugging purposes
     # grid.mark_custom_cell(start_idx, 3)
@@ -184,7 +205,7 @@ def generate_waypoints(p, mobot, start_pos = spawn_pos, target_pos = end_room_po
     # grid.mark_custom_cells(path, 2)
     # grid.mark_custom_cell(start_idx, 3)
     # grid.mark_custom_cell(end_idx, 3)
-    # grid.print_grid()
+    grid.print_grid()
 
     # get path in real-world coordinates
     waypoints = [grid.grid_to_world(cell[0], cell[1]) for cell in path]
@@ -192,8 +213,12 @@ def generate_waypoints(p, mobot, start_pos = spawn_pos, target_pos = end_room_po
     smoothed_waypoints = smooth_trajectory_cubic(waypoints, num_points=200)
     return smoothed_waypoints
 
-def follow_waypoints(p, mobot, smoothed_waypoints):
+########################################################################################################
 
+def follow_waypoints(p, mobot, smoothed_waypoints):
+    """
+    This function makes the robot follow the supplied waypoints
+    """
     global current_pos
     global previous_pos
     global total_driving_distance
@@ -271,19 +296,28 @@ def follow_waypoints(p, mobot, smoothed_waypoints):
     #         force=80
     # )
 
+########################################################################################################
+
 def grasp_attach(p, mobot, obj_id=21):
-    # gripper open
+    """
+    This function attaches object mentioned to the gripper
+    """
     global constraint
     constraint = attach(obj_id, mobot.robotId, 18)
 
+########################################################################################################
+
 def grasp_detach(p, mobot):
-    # gripper close
+    """
+    This function detaches object mentioned to the gripper
+    """
     global constraint
     detach(constraint)
     constraint = None
 
-# driver code
-# total_driving_distance = 0
+########################################################################################################
+
+# DRIVER CODE ###########################################################################################
 
 if TASK_NUM == 1:
     smoothed_waypoints = generate_waypoints(p, mobot, target_pos=nav_overall_pos_1)      ### 1
@@ -292,39 +326,23 @@ elif TASK_NUM == 2:
 else:
     smoothed_waypoints = generate_waypoints(p, mobot, target_pos=navi_location)       ### some other task
 
+########################################################################################################
+
 while (1):
     time.sleep(1./240.)
 
     # mug_position = get_mug_pose(p)
     # print(f"Mug position: {mug_position}")
 
+    # NAVIGATION ##############################################################################################
     if NAV and not(NAV_COMPLETE):
         follow_waypoints(p, mobot, smoothed_waypoints)
         print("==== Navigation complete =================")
-        # if navi_flag == False:
-        #     if current_pos[0] > 1.6 and current_pos[1] > -0.35:
-        #         print("Reached the goal region!")
-        #         print("Total driving distance: ", total_driving_distance)
-        #         navi_flag = True
-        #         break
-        #         # stop_robot(p, mobot)
-        #     else:
-        #         # pass
-        #         print("Current driving distance: ", total_driving_distance)
-        #         print("Current position: ", current_pos)
-        #         # stop_robot(p, mobot)
-        #         # pass
-        #         # break
-        # else:
-        #     # pass
-        #     print("Reached the goal region! Total driving distance: ", total_driving_distance)
-        #     break
-        #     # stop_robot(p, mobot)
 
+    # MANIPULATION ############################################################################################
     elif MANIP and NAV_COMPLETE and not(MANIP_COMPLETE):
         mug_position = get_mug_pose(p)
         # print(f"Mug position: {mug_position}")
-
         if TASK_NUM == 1:
             manipulate_simple_ik(p, mobot, mug1_pos)        ## 1
         elif TASK_NUM == 2:
@@ -335,9 +353,10 @@ while (1):
 
         MANIP_COMPLETE = 1
         print("==== Manipulation complete =================")
-
         # ee_position, _, _ = get_robot_ee_pose(p, mobot.robotId)
         # print(f"End-Effector Position: {ee_position}")
+
+    # GRASPING ATTACH ###########################################################################################
     elif GRASP and NAV_COMPLETE and MANIP_COMPLETE and not(GRASP_COMPLETE):
         if TASK_NUM == 1:
             grasp_attach(p, mobot, mug1_id) # 1
@@ -347,6 +366,8 @@ while (1):
             grasp_attach(p, mobot, grasp_id)
         print("==== Grasp Attach complete =================")
         GRASP_COMPLETE = 1
+
+    # REMANING OPERATIONS #######################################################################################
     elif GRASP_COMPLETE and not(END):
         if TASK_NUM == 1:
             # Manipoulation 2
@@ -405,28 +426,16 @@ while (1):
         print("==== Navigation to GOAL complete =================")
         base_control(mobot, p, forward=0, turn=0)
         END = 1
+
+    # COMPLETE TASK #########################################################################################
     else:
         print("=== TASK DONE =================")
         break
 
+########################################################################################################
 # Stop simulation
 while True:
     p.stepSimulation()
     time.sleep(1 / 240.0)
 
-    # if MANIP and :
-    # if grasp_flag == False:
-    #     mug_position = get_mug_pose(p)
-    #     #print("Mug position: ", mug_position)
-
-    #     if mug_position[0] > 3.3 and mug_position[0] < 3.5 \
-    #         and mug_position[1] > -0.17 and mug_position[1] < 0.25 \
-    #         and mug_position[2] > 0.71 and mug_position[2] < 0.75:
-    #         print("Mug is in the drawer!")
-    #         grasp_flag = True
-    # else:
-    #     print("Mug is in the drawer!")
-
-
-    # ee_position, _, _ = get_robot_ee_pose(p, mobot.robotId)
-    #print("End-effector position: ", ee_position)
+########################################################################################################

@@ -1,3 +1,6 @@
+"""
+This is the default main.py file to control the robot using keyboard key events.
+"""
 import time
 import numpy as np
 import pickle
