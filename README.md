@@ -3,6 +3,15 @@ Project for CS4278/CS5478 Intelligent Robots: Algorithms and Systems
 
 # **Brief Instructions for `main.py`**
 
+Please go through `main.py` and comments to run the file.
+
+### Run command
+Clone this repository and then follow the below
+```
+cd VisoBot
+python3 simulation/main.py
+```
+
 ### 1. **Initialization**
 - Connects to PyBullet and sets up gravity.
 - Loads the robot, environment, and static grid map with obstacle inflation.
