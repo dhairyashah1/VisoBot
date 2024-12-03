@@ -13,7 +13,7 @@ class EndEffectorController:
         self.joint_indices = joint_indices
         self.joint_limits = joint_limits
 
-    def move_to_position(self, target_position, max_steps=500, max_velocity=0.1):
+    def move_to_position(self, target_position, max_steps=800, max_velocity=0.05): #0.01
         """
         Moves the end effector to the specified target position using prismatic joints.
         
@@ -24,14 +24,19 @@ class EndEffectorController:
         current_position = np.array(p.getLinkState(self.robot_id, self.end_effector_index)[0])
         target_position = np.array(target_position)
 
-        self.orient_base_to_match_arm_orientation(target_position)
+        self.orient_base_to_match_arm_orientation(target_position) #originalk
+        # self.orient_base_to_target(target_position)
 
         for step in range(max_steps):
             print(f"Step {step + 1}/{max_steps}: Moving to target position {target_position}, given current position {current_position}")
             direction = target_position - current_position
             distance = np.linalg.norm(direction)
-            if distance < 0.01:
-                print("Target reached.")
+            if distance < 0.005:
+                print("====================================================")
+                print("End-effector target reached ===>")
+                print("----------------------------------------------------")
+                print(f"Current end-effector position: {current_position}")
+                print("====================================================")
                 arm_control(self.robot, p, up=0, stretch=0, roll=0, yaw=0)
                 base_control(self.robot, p, forward=0, turn=0)
                 break
@@ -54,7 +59,8 @@ class EndEffectorController:
                 next_position
             )
 
-            joint_angle_indices = [2, 5, 6, 7, 8, 9, 10, 11]
+            # joint_angle_indices = [0, 1, 2, 5, 6, 7, 8, 9, 10, 11] # adding more joints - 0 and 1
+            joint_angle_indices = [2, 5, 6, 7, 8, 9, 10, 11] # adding more joints - 0 and 1
 
             # Move each joint to the calculated angle
             for i in range(len(self.joint_indices)):
@@ -83,6 +89,8 @@ class EndEffectorController:
                     maxVelocity=max_velocity
                 )
 
+            # self.orient_base_to_match_arm_orientation(target_position) #originalk
+
             # Step the simulation to move the joints
             p.stepSimulation()
 
@@ -98,7 +106,8 @@ class EndEffectorController:
         """
         # Temporarily move the end effector to the position to check for collisions
         temp_joint_angles = p.calculateInverseKinematics(self.robot_id, self.end_effector_index, position)
-        joint_angle_indices = [2, 5, 6, 7, 8, 9, 10, 11]
+        # joint_angle_indices = [0, 1, 2, 5, 6, 7, 8, 9, 10, 11] # added 0 and 1
+        joint_angle_indices = [2, 5, 6, 7, 8, 9, 10, 11] # added 0 and 1
         for i in range(len(self.joint_indices)):
             p.resetJointState(self.robot_id, self.joint_indices[i], temp_joint_angles[joint_angle_indices[i]])
         p.stepSimulation()
@@ -167,10 +176,10 @@ class EndEffectorController:
         desired_yaw = self.get_target_arm_orientation(target_pos)
         
         # Calculate the angle difference
-        angle_diff = np.arctan2(np.sin(desired_yaw - current_yaw), 
+        angle_diff = np.arctan2(np.sin(desired_yaw - current_yaw),
                                 np.cos(desired_yaw - current_yaw))
         
-        max_attempts = 200
+        max_attempts = 5000 #200
         attempts = 0
         
         while attempts < max_attempts:
@@ -180,9 +189,9 @@ class EndEffectorController:
                 return True
             
             # Apply rotation control
-            turn = np.sign(angle_diff) * 0.8
+            turn = np.sign(angle_diff) * speed #0.8
             base_control(self.robot, p, forward=0, turn=turn)
-            
+
             p.stepSimulation()
             time.sleep(0.01)
             
@@ -192,10 +201,68 @@ class EndEffectorController:
                                     np.cos(desired_yaw - current_yaw))
             print('angle diff: ', angle_diff)
             attempts += 1
+
         
         print("Failed to orient base within max attempts")
         base_control(self.robot, p, forward=0, turn=0)
         return False
+
+    def get_current_base_orientation(self):
+        """Get the current base orientation (yaw) from the robot's base."""
+        _, _, euler_orientation = get_robot_base_pose(p, self.robot_id)
+        current_yaw = euler_orientation[2]  # Assuming yaw is the third element in Euler angles
+        print(f"Current Base Yaw (rad): {current_yaw}, (deg): {np.degrees(current_yaw)}")
+        return current_yaw
+
+    def get_target_base_orientation(self, target_pos):
+        """Calculate the desired base orientation based on the target position."""
+        target_xy = np.array(target_pos[:2])
+        current_base_pos, _, _ = get_robot_base_pose(p, self.robot_id)
+        current_base_xy = np.array(current_base_pos[:2])
+
+        # Calculate the desired yaw angle for the base to face the target
+        direction = target_xy - current_base_xy
+        desired_yaw = np.arctan2(direction[1], direction[0])
+        print(f"Target XY: {target_xy}, Current Base XY: {current_base_xy}, Direction: {direction}")
+        print(f"Desired Base Yaw (rad): {desired_yaw}, (deg): {np.degrees(desired_yaw)}")
+
+        return desired_yaw
+
+    def orient_base_to_target(self, target_pos, speed=0.1):
+        """Orient the base to face the target position."""
+        current_yaw = self.get_current_base_orientation()
+        desired_yaw = self.get_target_base_orientation(target_pos)
+        
+        # Calculate the angle difference
+        angle_diff = np.arctan2(np.sin(desired_yaw - current_yaw), 
+                                np.cos(desired_yaw - current_yaw))
+        
+        max_attempts = 200
+        attempts = 0
+        
+        while attempts < max_attempts:
+            if abs(angle_diff) < 0.001:  # Orientation threshold
+                base_control(self.robot, p, forward=0, turn=0)
+                print("Base oriented to face the target")
+                return True
+            
+            # Apply rotation control
+            turn = np.sign(angle_diff) * speed
+            base_control(self.robot, p, forward=0, turn=turn)
+            
+            p.stepSimulation()
+            time.sleep(0.01)
+
+            # Update current yaw and angle difference
+            current_yaw = self.get_current_base_orientation()
+            angle_diff = np.arctan2(np.sin(desired_yaw - current_yaw), 
+                                    np.cos(desired_yaw - current_yaw))
+            print('angle diff: ', angle_diff)
+            attempts += 1
+
+        print("Failed to orient base within max attempts")
+        return False
+
 
 # Example usage:
 def main():
@@ -204,8 +271,9 @@ def main():
     p.setGravity(0, 0, -9.81)
     p.setRealTimeSimulation(0)
 
-    mobot, table_id = init_scene(p, mug_random=False)
-    
+    mobot = init_scene(p, mug_random=False)
+    # mobot, table_id = init_scene(p, mug_random=False)
+
     # Define the joint indices and limits
     joint_indices = [3, 8, 10, 11, 12, 13, 14, 16]
     joint_limits = {}
@@ -222,7 +290,7 @@ def main():
         # Print the joint information
         print(f"Joint Index: {joint_index}, Joint Name: {joint_name}, Joint Type: {joint_type}, "
             f"Lower Limit: {joint_lower_limit}, Upper Limit: {joint_upper_limit}")
-        
+
         joint_limits[joint_index] = (joint_lower_limit, joint_upper_limit)
 
 
@@ -231,9 +299,12 @@ def main():
     controller = EndEffectorController(mobot, mobot.robotId, end_effector_index, joint_indices, joint_limits)
 
     # Move the end effector to the target position
-    target_position = [0.27, -0.71, 0.92]
+    # target_position = [0.27, -0.71, 0.92] # cup location
+    target_position = [0.27, -0.89, 0.91] # cup location measured
+
     # target_position = [-1, -3.8, 0.92]
-    time.sleep(10)
+    # time.sleep(10)
+    time.sleep(5)
     # controller.orient_base_to_match_arm_orientation(target_position)
     controller.move_to_position(target_position, max_velocity=0.05)
     arm_control(mobot, p, up=0, stretch=0, roll=0, yaw=0)

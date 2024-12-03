@@ -10,6 +10,19 @@ import numpy as np
 
 sys.path.append('./')
 
+object_ids = []
+cabinet_id = 1
+mug1_id = 0
+
+def get_object_ids():
+    return object_ids
+
+def get_cabinet_id():
+    return cabinet_id
+
+def get_mug1_id():
+    return mug1_id
+
 def init_scene(p, mug_random=False):
     root_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../")
 
@@ -20,7 +33,8 @@ def init_scene(p, mug_random=False):
 
     ################ Robot
     mobot_urdf_file = os.path.join(root_dir,"resource/urdf/stretch/stretch.urdf")
-    mobot = Robot(pybullet_api=p, start_pos=[-0.8,0.0,0.03], urdf_file=mobot_urdf_file)
+    mobot = Robot(pybullet_api=p, start_pos=[-0.8,0.0,0.03], urdf_file=mobot_urdf_file) #original
+    # mobot = Robot(pybullet_api=p, start_pos=[-0.36,-0.5,0.08], urdf_file=mobot_urdf_file) #wamika
 
     for _ in range(30):
         p.stepSimulation()
@@ -38,6 +52,8 @@ def init_scene(p, mug_random=False):
     mass = 0
     table_id = p.createMultiBody(mass, baseCollisionShapeIndex=table_c, baseVisualShapeIndex=table_v,
                                           basePosition=(table_depth / 2.0 + 0.1, 0.05, table_height / 2.0))
+    object_ids.append(table_id) # Added
+
     table_color = [128 / 255.0, 128 / 255.0, 128 / 255.0, 1.0]
     p.changeVisualShape(table_id, -1, rgbaColor=table_color)
 
@@ -57,18 +73,17 @@ def init_scene(p, mug_random=False):
                                              baseCollisionShapeIndex=wall_c2,\
                                              baseVisualShapeIndex=wall_v2,\
                                              basePosition=(wall_center_x, -1.4, wall_height/2.0))
-
+    object_ids.append(wall_id) # Added
     wall_id_back = p.createMultiBody(mass,\
                                              baseCollisionShapeIndex=wall_c,\
                                              baseVisualShapeIndex=wall_v,\
                                              basePosition=(wall_center_x-3.0, -1.9, wall_height/2.0))
-
-
+    object_ids.append(wall_id_back) # Added
     wall_id_front = p.createMultiBody(mass,\
                                              baseCollisionShapeIndex=wall_c,\
                                              baseVisualShapeIndex=wall_v,\
                                              basePosition=(wall_center_x+3.0, -1.9, wall_height/2.0))
-
+    object_ids.append(wall_id_front) # Added
     wall_width_left = 2.0
     wall_width_right = 6.0
     wall_depth = 0.02
@@ -88,17 +103,19 @@ def init_scene(p, mug_random=False):
                                              baseVisualShapeIndex=wall_v_left,\
                                              basePosition=(wall_left_center_x-1.0, wall_left_center_y-0.92, wall_height/2.0),
                                              baseOrientation=p.getQuaternionFromEuler((0,0,np.pi/2.0)))
+    object_ids.append(wall_left_id) # Added
     wall_right_id = p.createMultiBody(mass,\
                                              baseCollisionShapeIndex=wall_c_right,\
                                              baseVisualShapeIndex=wall_v_right,\
                                              basePosition=(wall_right_center_x+1.0, wall_right_center_y, wall_height/2.0),
                                              baseOrientation=p.getQuaternionFromEuler((0,0,-np.pi/2.0)))
-
+    object_ids.append(wall_right_id) # Added
     wall_right_id2 = p.createMultiBody(mass,\
                                              baseCollisionShapeIndex=wall_c_right,\
                                              baseVisualShapeIndex=wall_v_right,\
                                              basePosition=(wall_right_center_x+1.0, wall_right_center_y-6.1, wall_height/2.0),
                                              baseOrientation=p.getQuaternionFromEuler((0,0,-np.pi/2.0)))
+    object_ids.append(wall_right_id2) # Added
 
     wall_color = [204/255.0,242/255.0,255/255.0,1.0]
     p.changeVisualShape(wall_left_id,-1,rgbaColor=wall_color)
@@ -109,6 +126,7 @@ def init_scene(p, mug_random=False):
 
     table_z = p.getAABB(table_id)[1][2]
 
+    # cabinet
     cabinet2_position = [-1.5, 0.25, table_z+ 1.5]
     cabinet2_scaling = 0.7
     cabinet2_orientation = p.getQuaternionFromEuler([0, 0, np.pi])
@@ -117,7 +135,9 @@ def init_scene(p, mug_random=False):
                                     basePosition=cabinet2_position,\
                                     baseOrientation=cabinet2_orientation,\
                                     globalScaling=cabinet2_scaling)
-
+    object_ids.append(cabinet2_id) # The one on the wall
+    global cabinet_id
+    cabinet_id = cabinet2_id
     p.changeVisualShape(cabinet2_id,2,rgbaColor=[0.5,0.5,0.5,1])
     p.changeVisualShape(cabinet2_id,1,rgbaColor=[1,1,1,1])
     p.changeVisualShape(cabinet2_id,3,rgbaColor=[1,1,1,1])
@@ -143,8 +163,7 @@ def init_scene(p, mug_random=False):
                                     basePosition=fridge_position, \
                                     baseOrientation=fridge_orientation, \
                                     globalScaling=fridge_scaling)
-
-
+    object_ids.append(fridge_id) # Added
     #######
     table_z = p.getAABB(table_id)[1][2]
     drawer_position = [3.84, 0.05,  0.42]
@@ -155,19 +174,20 @@ def init_scene(p, mug_random=False):
                                     baseOrientation=drawer_orientation, \
                                     globalScaling=drawer_scaling, \
                                     useFixedBase=True)
-
+    object_ids.append(drawer_id) # Added
     #### bed
     #### table initialization
     bed_height = 0.7#0.12 * 2.0
     bed_width = 1.8
-    bed_depth = 2.2
+    bed_depth = 2
     bed_v = p.createVisualShape(p.GEOM_BOX, halfExtents=[bed_depth / 2.0, bed_width / 2.0,
                                                                         bed_height / 2.0])
     bed_c = p.createCollisionShape(p.GEOM_BOX, halfExtents=[bed_depth / 2.0, bed_width / 2.0,
                                                                            bed_height / 2.0])
     mass = 0
     bed_id = p.createMultiBody(mass, baseCollisionShapeIndex=bed_c, baseVisualShapeIndex=bed_v,
-                                          basePosition=(bed_depth / 2.0 + 1.9, -1.45, bed_height / 2.0))
+                                          basePosition=(bed_depth / 2.0 + 1.9 + 0.2, -1.45, bed_height / 2.0))
+    object_ids.append(bed_id) # Added
     bed_color = [128 / 255.0, 128 / 255.0, 128 / 255.0, 1.0]
     p.changeVisualShape(bed_id, -1, rgbaColor=bed_color)
 
@@ -182,7 +202,7 @@ def init_scene(p, mug_random=False):
                                        baseOrientation=microwave_orientation, \
                                        globalScaling=microwave_scaling, \
                                        useFixedBase=True)
-
+    object_ids.append(microwave_id) # Added
     p.changeVisualShape(microwave_id, 1, rgbaColor=[0.2, 0.2, 0.2, 1], specularColor=[1., 1., 1.])
     p.changeVisualShape(microwave_id, 0, rgbaColor=[0.4, 0.4, 0.4, 1], specularColor=[1., 1., 1.])
     p.changeVisualShape(microwave_id, 2, rgbaColor=[0.5, 0.5, 0.5, 1])
@@ -199,7 +219,7 @@ def init_scene(p, mug_random=False):
                                  globalScaling=box_scaling,
                                  useFixedBase=False,
                                  flags=p.URDF_USE_MATERIAL_COLORS_FROM_MTL)
-
+    object_ids.append(box_id) # Added
     numJoint = p.getNumJoints(box_id)
     box_AABB = p.getAABB(box_id, 0)
     box_height = box_AABB[1][2] - box_AABB[0][2]
@@ -263,7 +283,11 @@ def init_scene(p, mug_random=False):
                                  globalScaling=mug_scaling,
                                  basePosition=mug_position,
                                  baseOrientation=mug_orientation)
+    global mug1_id
+    mug1_id = mug_id
     # self.p.changeVisualShape(self.mug_id, -1, rgbaColor=[1.,1.,1.0,1])
+
+
     obj_friction_ceof = 4000.0
     p.changeDynamics(mug_id, -1, lateralFriction=obj_friction_ceof)
     p.changeDynamics(mug_id, -1, rollingFriction=obj_friction_ceof)
@@ -279,6 +303,7 @@ def init_scene(p, mug_random=False):
                                     basePosition=trashbin_position, \
                                     baseOrientation=trashbin_orientation, \
                                     globalScaling=trashbin_scaling)
+    object_ids.append(trashbin_id) # Added
     p.changeVisualShape(trashbin_id, -1, rgbaColor=[200 / 255., 179 / 255., 179 / 255., 1])
 
     pan_position = [0.35, .2, table_z + 0.05]
