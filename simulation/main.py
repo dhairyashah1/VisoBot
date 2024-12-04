@@ -35,7 +35,7 @@ NAV = 1                           # Navigation
 NAV_COMPLETE = 0
 MANIP = 1                         # Manipulation
 MANIP_COMPLETE = 0
-GRASP = 0                         # Grasp
+GRASP = 1                         # Grasp
 GRASP_COMPLETE = 0
 END = 0
 
